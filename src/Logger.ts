@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { join } from 'node:path';
 import moment from 'moment';
-import { _str } from 'tiny-supporter';
+import { _str } from '@noravel/supporter';
 import ILogger, { LOG_LEVEL } from './Interfaces/ILogger';
 import ILoggerConfig from './Interfaces/ILoggerConfig';
 import LogColor from './LogColor';

@@ -1,6 +1,6 @@
 {
   "name": "@noravel/logger",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Noravel logger",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -29,6 +29,6 @@
   },
   "dependencies": {
     "moment": "^2.30.1",
-    "tiny-supporter": "^1.8.2"
+    "@noravel/supporter": "^1.8.2"
   }
 }
