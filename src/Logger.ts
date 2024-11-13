@@ -80,7 +80,8 @@ export default class Logger implements ILogger {
             [LOG_LEVEL.INFO]: LogColor.green('[' + LOG_LEVEL[level] + ']'),
             [LOG_LEVEL.DEBUG]: LogColor.blue('[' + LOG_LEVEL[level] + ']'),
           } as Record<string, string>
-        )[level] ?? '') + ` ${message}`,
+        )[level] ?? '') +
+        ` ${message}`,
     );
 
     this.appendFile(`[${now}] [${LOG_LEVEL[level]}] ${message}`);
