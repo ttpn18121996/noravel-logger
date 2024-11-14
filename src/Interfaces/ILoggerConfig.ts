@@ -1,4 +1,5 @@
 export default interface ILoggerConfig {
-  driver: string;
+  channel: string;
   path: string;
+  prefix: string;
 }

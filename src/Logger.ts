@@ -1,20 +1,35 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import { join } from 'node:path';
 import moment from 'moment';
-import { _str } from '@noravel/supporter';
-import ILogger, { LOG_LEVEL } from './Interfaces/ILogger';
+import { _arr, _str } from '@noravel/supporter';
+import ILogger, { IChannel, LOG_LEVEL } from './Interfaces/ILogger';
 import ILoggerConfig from './Interfaces/ILoggerConfig';
 import LogColor from './LogColor';
 
 export default class Logger implements ILogger {
   private static _instance: Logger;
   public _config: ILoggerConfig;
+  public _channels: IChannel[];
 
   private constructor() {
     this._config = {
-      driver: 'single',
+      channel: 'single',
       path: process.cwd(),
+      prefix: '',
     };
+
+    this._channels = [
+      {
+        name: 'single',
+        driver: 'single',
+        path: '',
+      },
+      {
+        name: 'daily',
+        driver: 'daily',
+        path: '',
+      },
+    ];
   }
 
   public static getInstance(config: Record<string, string> = {}): Logger {
@@ -27,8 +42,16 @@ export default class Logger implements ILogger {
     return Logger._instance;
   }
 
-  public configure(config: Record<string, string> = {}) {
+  public configure(config: Record<string, unknown> = {}): this {
     this._config = { ...this._config, ...config };
+
+    return this;
+  }
+
+  public addChannel(channel: IChannel): this {
+    this._channels.push(channel);
+
+    return this;
   }
 
   public emergency(message: string, context: Record<string, string> = {}) {
@@ -84,11 +107,13 @@ export default class Logger implements ILogger {
         ` ${message}`,
     );
 
-    this.appendFile(`[${now}] [${LOG_LEVEL[level]}] ${message}`);
+    this.appendFile(`[${now}] [${LOG_LEVEL[level]}] ${message}`, level);
   }
 
   public nowFormated(): string {
-    if (this._config.driver === 'daily') {
+    const { driver } = this.getChannel();
+
+    if (driver === 'daily') {
       return this.timeFormated();
     }
 
@@ -103,17 +128,75 @@ export default class Logger implements ILogger {
     return moment().format('HH:mm:ss');
   }
 
-  public appendFile(content: string) {
-    let fileName = 'single_log.log';
-
-    if (this._config.driver === 'daily') {
-      fileName = this.dateFormated() + '.log';
+  public async appendFile(content: string, level: LOG_LEVEL) {
+    if (!this.validLevel(level)) {
+      return;
     }
 
-    const filePath = join(this._config.path, fileName);
+    const storagePath = this._config.path;
+    const prefix = this._config.prefix;
+    let { name, path: channelPath } = this.getChannel();
 
-    fs.appendFile(filePath, content + '\n', err => {
+    const fileName = _str(name)
+      .prepend(prefix + '-')
+      .replace(/^\-/, '');
+
+    if (this.getChannel().driver === 'daily') {
+      fileName.append('-' + this.dateFormated());
+    }
+
+    const folderPath = join(storagePath, channelPath);
+    const filePath = join(folderPath, fileName.append('.log').toString());
+
+    try {
+      await fs.access(folderPath);
+    } catch (error) {
+      await fs.mkdir(folderPath, { recursive: true });
+    }
+
+    await fs.appendFile(filePath, content + '\n').catch(err => {
       if (err) console.log(err.message);
     });
+  }
+
+  public getChannel() {
+    const { channel: channelDefault } = this._config;
+
+    return (
+      this._channels.find(channel => channel.name === channelDefault) ?? {
+        name: 'single',
+        driver: 'single',
+        path: '',
+      }
+    );
+  }
+
+  private validLevel(currentLevel: LOG_LEVEL) {
+    const channel = this.getChannel();
+    const level = channel?.level ?? LOG_LEVEL.DEBUG;
+    const groupFiles = _arr().range(level, LOG_LEVEL.EMERGENCY).toArray();
+
+    return groupFiles.includes(currentLevel);
+  }
+
+  public channel(name: string) {
+    const logger = this.replicate();
+    logger.configure({
+      channel: name,
+    });
+
+    return logger;
+  }
+
+  public replicate() {
+    const newInstance = this.newInstance();
+    newInstance._config = { ...this._config };
+    newInstance._channels = [...this._channels];
+
+    return newInstance;
+  }
+
+  public newInstance() {
+    return new Logger();
   }
 }
