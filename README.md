@@ -68,16 +68,6 @@ projects/
         └── single.log
 ```
 
-## Group storage path
-
-```javascript
-Logger.configure({
-  group_path: {
-    errors: [LOG_LEVEL.EMERGENCY, LOG_LEVEL.ALERT, LOG_LEVEL.CRITICAL, LOG_LEVEL.ERROR],
-  },
-});
-```
-
 ## Channel
 
 We supported 2 drivers and 2 channels as `single` and `daily`.
@@ -96,7 +86,7 @@ It will store all in a file.
 [2024-01-01 00:00:07] [DEBUG] Debug
 ```
 
-The `daily` driver stores the log file as `{YYYY-MM-DD}.log`. The log will be saved by day for each respective file.
+The `daily` driver stores the log file as `daily-{YYYY-MM-DD}.log`. The log will be saved by day for each respective file.
 
 ```javascript
 Logger.configure({
@@ -125,6 +115,10 @@ projects/
 ### Add the custom channel
 
 ```javascript
+const { LOG_LEVEL } = require('@noravel/logger');
+// OR
+import { LOG_LEVEL } from '@noravel/logger';
+
 Logger.addChannel({
   name: 'error',
   driver: 'single',
