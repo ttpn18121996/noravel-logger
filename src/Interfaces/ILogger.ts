@@ -11,8 +11,16 @@ export enum LOG_LEVEL {
   DEBUG,
 }
 
+export interface IChannel {
+  name: string;
+  driver: string;
+  path: string;
+  level?: LOG_LEVEL;
+}
+
 export default interface ILogger {
   _config: ILoggerConfig;
+  _channels: IChannel[];
   emergency: (message: string, context: Record<string, string>) => void;
   alert: (message: string, context: Record<string, string>) => void;
   critical: (message: string, context: Record<string, string>) => void;
