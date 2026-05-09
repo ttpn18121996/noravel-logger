@@ -196,5 +196,17 @@ With the `daily` driver
 projects/
 └── storage/
     └── logs/
-        └── noravel-2024-01-01.log
+        └── noravel-daily-2024-01-01.log
+```
+
+## Configure the retention policy for the daily
+
+The retention policy for the daily channel can be configured via the `days` configuration option.
+The number of days that daily log files should be retained is `14 days` by default.
+
+```javascript
+Logger.configure({
+  channel: 'daily',
+  days: 14
+});
 ```

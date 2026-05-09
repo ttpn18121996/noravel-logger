@@ -18,16 +18,18 @@ export interface IChannel {
   level?: LOG_LEVEL;
 }
 
+export type Messageable = string | Error | { toString(): string };
+
 export default interface ILogger {
   _config: ILoggerConfig;
   _channels: IChannel[];
-  emergency: (message: string, context: Record<string, string>) => void;
-  alert: (message: string, context: Record<string, string>) => void;
-  critical: (message: string, context: Record<string, string>) => void;
-  error: (message: string, context: Record<string, string>) => void;
-  warning: (message: string, context: Record<string, string>) => void;
-  notice: (message: string, context: Record<string, string>) => void;
-  info: (message: string, context: Record<string, string>) => void;
-  debug: (message: string, context: Record<string, string>) => void;
-  log: (level: LOG_LEVEL, message: string, context: Record<string, string>) => void;
+  emergency: (message: Messageable, context: Record<string, string>) => void;
+  alert: (message: Messageable, context: Record<string, string>) => void;
+  critical: (message: Messageable, context: Record<string, string>) => void;
+  error: (message: Messageable, context: Record<string, string>) => void;
+  warning: (message: Messageable, context: Record<string, string>) => void;
+  notice: (message: Messageable, context: Record<string, string>) => void;
+  info: (message: Messageable, context: Record<string, string>) => void;
+  debug: (message: Messageable, context: Record<string, string>) => void;
+  log: (level: LOG_LEVEL, message: Messageable, context: Record<string, string>) => void;
 }

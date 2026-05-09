@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import { join } from 'node:path';
-import moment from 'moment';
+import { format } from 'date-fns';
 import { _arr, _str } from '@noravel/supporter';
-import ILogger, { IChannel, LOG_LEVEL } from './Interfaces/ILogger';
+import ILogger, { IChannel, LOG_LEVEL, Messageable } from './Interfaces/ILogger';
 import ILoggerConfig from './Interfaces/ILoggerConfig';
 import LogColor from './LogColor';
 
@@ -16,6 +16,7 @@ export default class Logger implements ILogger {
       channel: 'single',
       path: process.cwd(),
       prefix: '',
+      days: 14,
     };
 
     this._channels = [
@@ -54,40 +55,49 @@ export default class Logger implements ILogger {
     return this;
   }
 
-  public emergency(message: string, context: Record<string, string> = {}) {
+  public emergency(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.EMERGENCY, message, context);
   }
 
-  public alert(message: string, context: Record<string, string> = {}) {
+  public alert(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.ALERT, message, context);
   }
 
-  public critical(message: string, context: Record<string, string> = {}) {
+  public critical(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.CRITICAL, message, context);
   }
 
-  public error(message: string, context: Record<string, string> = {}) {
+  public error(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.ERROR, message, context);
   }
 
-  public warning(message: string, context: Record<string, string> = {}) {
+  public warning(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.WARNING, message, context);
   }
 
-  public notice(message: string, context: Record<string, string> = {}) {
+  public notice(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.NOTICE, message, context);
   }
 
-  public info(message: string, context: Record<string, string> = {}) {
+  public info(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.INFO, message, context);
   }
 
-  public debug(message: string, context: Record<string, string> = {}) {
+  public debug(message: Messageable, context: Record<string, string> = {}) {
     this.log(LOG_LEVEL.DEBUG, message, context);
   }
 
-  public log(level: LOG_LEVEL, message: string, context: Record<string, string> = {}) {
-    message = _str(message).bind(context).toString();
+  public log(level: LOG_LEVEL, message: Messageable, context: Record<string, string> = {}) {
+    if (message instanceof Error) {
+      message = message.stack || message.name + ': ' + message.message;
+    } else if (
+      typeof message === 'string' ||
+      (typeof message === 'object' && typeof message.toString === 'function' && 'toString' in message)
+    ) {
+      message = _str((typeof message.toString === 'function' ? message.toString() : message) as string)
+        .bind(context)
+        .toString();
+    }
     const now = this.nowFormated();
 
     console.log(
@@ -117,15 +127,15 @@ export default class Logger implements ILogger {
       return this.timeFormated();
     }
 
-    return moment().format('YYYY-MM-DD HH:mm:ss');
+    return format(Date.now(), 'yyyy-MM-dd HH:mm:ss');
   }
 
   public dateFormated(): string {
-    return moment().format('YYYY-MM-DD');
+    return format(Date.now(), 'yyyy-MM-dd');
   }
 
   public timeFormated(): string {
-    return moment().format('HH:mm:ss');
+    return format(Date.now(), 'HH:mm:ss');
   }
 
   public async appendFile(content: string, level: LOG_LEVEL) {
@@ -141,22 +151,47 @@ export default class Logger implements ILogger {
       .prepend(prefix + '-')
       .replace(/^\-/, '');
 
-    if (this.getChannel().driver === 'daily') {
+    if (this.isDaily()) {
       fileName.append('-' + this.dateFormated());
     }
 
     const folderPath = join(storagePath, channelPath);
     const filePath = join(folderPath, fileName.append('.log').toString());
 
+    await fs.mkdir(folderPath, { recursive: true });
+
     try {
-      await fs.access(folderPath);
+      await fs.access(filePath);
     } catch (error) {
-      await fs.mkdir(folderPath, { recursive: true });
+      if (this.isDaily()) {
+        await this.cleanupOldLogs(fileName.toString(), folderPath);
+      }
     }
 
     await fs.appendFile(filePath, content + '\n').catch(err => {
       if (err) console.log(err.message);
     });
+  }
+
+  public async cleanupOldLogs(fileName: string, folderPath: string) {
+    const files = await fs.readdir(folderPath);
+    const prefixFileName = fileName.replace(/-\d{4}-\d{2}-\d{2}\.log$/, '');
+    const now = Date.now();
+
+    for (const file of files) {
+      const match = file.match(new RegExp(`^${prefixFileName}-(\\d{4}-\\d{2}-\\d{2})\\.log$`));
+      if (!match) {
+        continue;
+      }
+
+      const date = new Date(match[1]);
+
+      const ageInDays = (now - date.getTime()) / (1000 * 60 * 60 * 24);
+      if (ageInDays > this._config.days) {
+        const fullPath = join(folderPath, file);
+        await fs.unlink(fullPath);
+      }
+    }
   }
 
   public getChannel() {
@@ -169,6 +204,10 @@ export default class Logger implements ILogger {
         path: '',
       }
     );
+  }
+
+  private isDaily() {
+    return this.getChannel().driver === 'daily';
   }
 
   private validLevel(currentLevel: LOG_LEVEL) {
