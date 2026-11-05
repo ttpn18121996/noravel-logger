@@ -1,13 +1,15 @@
 {
   "name": "@noravel/logger",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Noravel logger",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "prettier:check": "prettier --ignore-path .prettierignore --check '**/*.{js,ts,json}'",
-    "prettier:fix": "prettier --ignore-path .prettierignore --write '**/*.{js,ts,json}'"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --ignore-path .prettierignore --check '**/*.{js,ts,json}'",
+    "format:fix": "prettier --ignore-path .prettierignore --write '**/*.{js,ts,json}'"
   },
   "files": [
     "dist"
@@ -23,12 +25,16 @@
   "author": "Trịnh Trần Phương Nam <ttpn18121996@gmail.com>",
   "license": "ISC",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.19.17",
-    "prettier": "^3.3.3",
-    "typescript": "^5.6.3"
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1"
   },
   "dependencies": {
-    "@noravel/supporter": "^1.8.2",
+    "@noravel/supporter": "^2.5.0",
     "date-fns": "^4.1.0"
   }
 }

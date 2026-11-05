@@ -1,22 +1,27 @@
 import fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { format } from 'date-fns';
-import { _arr, _str } from '@noravel/supporter';
-import ILogger, { IChannel, LOG_LEVEL, Messageable } from './Interfaces/ILogger';
-import ILoggerConfig from './Interfaces/ILoggerConfig';
-import LogColor from './LogColor';
+import { _arr, _obj, _str } from '@noravel/supporter';
 
-export default class Logger implements ILogger {
+import type { LogConfig } from './interfaces/config.interface';
+import LogColor from './log-color';
+import type { LogChannel } from './interfaces/channel.interface';
+import type { Logger as LoggerInterface, Messageable } from './interfaces/logger.interface';
+import { LOG_LEVEL } from './enums/log-level';
+
+const DAILY_DEFAULT_DAYS = 14;
+
+export default class Logger implements LoggerInterface {
   private static _instance: Logger;
-  public _config: ILoggerConfig;
-  public _channels: IChannel[];
+  public _config: LogConfig;
+  public _channels: LogChannel[];
 
   private constructor() {
     this._config = {
       channel: 'single',
       path: process.cwd(),
       prefix: '',
-      days: 14,
+      days: DAILY_DEFAULT_DAYS,
     };
 
     this._channels = [
@@ -33,7 +38,7 @@ export default class Logger implements ILogger {
     ];
   }
 
-  public static getInstance(config: Record<string, string> = {}): Logger {
+  public static getInstance(config: LogConfig): Logger {
     if (!Logger._instance) {
       Logger._instance = new Logger();
     }
@@ -43,13 +48,13 @@ export default class Logger implements ILogger {
     return Logger._instance;
   }
 
-  public configure(config: Record<string, unknown> = {}): this {
+  public configure(config: LogConfig): this {
     this._config = { ...this._config, ...config };
 
     return this;
   }
 
-  public addChannel(channel: IChannel): this {
+  public addChannel(channel: LogChannel): this {
     this._channels.push(channel);
 
     return this;
@@ -104,14 +109,14 @@ export default class Logger implements ILogger {
       `[${now}] ` +
         ((
           {
-            [LOG_LEVEL.EMERGENCY]: LogColor.bgRed('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.ALERT]: LogColor.bgYellow('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.CRITICAL]: LogColor.white('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.ERROR]: LogColor.red('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.WARNING]: LogColor.yellow('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.NOTICE]: LogColor.magenta('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.INFO]: LogColor.green('[' + LOG_LEVEL[level] + ']'),
-            [LOG_LEVEL.DEBUG]: LogColor.blue('[' + LOG_LEVEL[level] + ']'),
+            [LOG_LEVEL.EMERGENCY]: LogColor.bgRed(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.ALERT]: LogColor.bgYellow(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.CRITICAL]: LogColor.white(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.ERROR]: LogColor.red(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.WARNING]: LogColor.yellow(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.NOTICE]: LogColor.magenta(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.INFO]: LogColor.green(`[${LOG_LEVEL[level]}]`),
+            [LOG_LEVEL.DEBUG]: LogColor.blue(`[${LOG_LEVEL[level]}]`),
           } as Record<string, string>
         )[level] ?? '') +
         ` ${message}`,
@@ -143,13 +148,13 @@ export default class Logger implements ILogger {
       return;
     }
 
-    const storagePath = this._config.path;
+    const storagePath = _obj.get(this._config, 'path', process.cwd());
     const prefix = this._config.prefix;
-    let { name, path: channelPath } = this.getChannel();
+    const { name, path: channelPath } = this.getChannel();
 
     const fileName = _str(name)
       .prepend(prefix + '-')
-      .replace(/^\-/, '');
+      .replace(/^-/, '');
 
     if (this.isDaily()) {
       fileName.append('-' + this.dateFormated());
@@ -162,14 +167,16 @@ export default class Logger implements ILogger {
 
     try {
       await fs.access(filePath);
-    } catch (error) {
+    } catch (_) {
       if (this.isDaily()) {
         await this.cleanupOldLogs(fileName.toString(), folderPath);
       }
     }
 
     await fs.appendFile(filePath, content + '\n').catch(err => {
-      if (err) console.log(err.message);
+      if (err) {
+        console.log(err.message);
+      }
     });
   }
 
@@ -187,7 +194,7 @@ export default class Logger implements ILogger {
       const date = new Date(match[1]);
 
       const ageInDays = (now - date.getTime()) / (1000 * 60 * 60 * 24);
-      if (ageInDays > this._config.days) {
+      if (ageInDays > _obj.get(this._config, 'days', DAILY_DEFAULT_DAYS)) {
         const fullPath = join(folderPath, file);
         await fs.unlink(fullPath);
       }
@@ -213,7 +220,7 @@ export default class Logger implements ILogger {
   private validLevel(currentLevel: LOG_LEVEL) {
     const channel = this.getChannel();
     const level = channel?.level ?? LOG_LEVEL.DEBUG;
-    const groupFiles = _arr().range(level, LOG_LEVEL.EMERGENCY).toArray();
+    const groupFiles = _arr().range(level, LOG_LEVEL.EMERGENCY);
 
     return groupFiles.includes(currentLevel);
   }
