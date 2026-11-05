@@ -1,0 +1,10 @@
+export enum LOG_LEVEL {
+  EMERGENCY,
+  ALERT,
+  CRITICAL,
+  ERROR,
+  WARNING,
+  NOTICE,
+  INFO,
+  DEBUG,
+}
