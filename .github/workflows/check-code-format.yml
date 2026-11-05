@@ -23,7 +23,7 @@ jobs:
       run: npm ci
 
     - name: "Run test"
-      run: npm run prettier:fix
+      run: npm run format:fix
 
     - name: "Commit linted files"
       uses: stefanzweifel/git-auto-commit-action@v5
