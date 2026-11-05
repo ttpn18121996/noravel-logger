@@ -1,28 +1,12 @@
-import ILoggerConfig from './ILoggerConfig';
-
-export enum LOG_LEVEL {
-  EMERGENCY,
-  ALERT,
-  CRITICAL,
-  ERROR,
-  WARNING,
-  NOTICE,
-  INFO,
-  DEBUG,
-}
-
-export interface IChannel {
-  name: string;
-  driver: string;
-  path: string;
-  level?: LOG_LEVEL;
-}
+import type { LOG_LEVEL } from '../enums/log-level';
+import type { LogChannel } from './channel.interface';
+import type { LogConfig } from './config.interface';
 
 export type Messageable = string | Error | { toString(): string };
 
-export default interface ILogger {
-  _config: ILoggerConfig;
-  _channels: IChannel[];
+export interface Logger {
+  _config: LogConfig;
+  _channels: LogChannel[];
   emergency: (message: Messageable, context: Record<string, string>) => void;
   alert: (message: Messageable, context: Record<string, string>) => void;
   critical: (message: Messageable, context: Record<string, string>) => void;
